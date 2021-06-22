@@ -92,7 +92,8 @@ export default class GcodePreviewControls extends Mixins(StateMixin, FilesMixin)
       .then((gcode) => {
         this.$store.dispatch('gcodePreview/loadGcode', {
           file,
-          gcode
+          gcode,
+          serveFromCache: true
         })
       })
       .catch(e => e)

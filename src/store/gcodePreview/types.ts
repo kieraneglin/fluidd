@@ -3,6 +3,12 @@ import { Thread } from 'threads'
 
 export type LayerNr = number
 
+export interface ParsingRequestPayload {
+  file: AppFile;
+  gcode: string;
+  serveFromCache: boolean;
+}
+
 export interface GcodePreviewState {
   moves: Move[];
   file?: AppFile;
