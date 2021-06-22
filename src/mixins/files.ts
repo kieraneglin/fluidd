@@ -5,6 +5,7 @@ import { Component } from 'vue-property-decorator'
 import { getThumb } from '@/store/helpers'
 import Axios, { AxiosRequestConfig, CancelTokenSource } from 'axios'
 import { authApi } from '@/api/auth.api'
+import { generateCacheKey } from '@/util/file-caching'
 
 @Component
 export default class FilesMixin extends Vue {
@@ -35,7 +36,7 @@ export default class FilesMixin extends Vue {
    * Loads a gcode file and parses for the gcode-viewer.
    */
   async getGcode (file: AppFile, options: FileRequestOptions = {}) {
-    const databaseKey = `${file.name}-${file.modified}`
+    const databaseKey = generateCacheKey(file)
 
     if (options.serveFromCache) {
       const record = await this.$indexedDb.table('files').get({ name: databaseKey })

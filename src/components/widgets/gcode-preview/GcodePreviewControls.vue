@@ -49,11 +49,12 @@
 </template>
 
 <script lang="ts">
-import { Component, Mixins, Prop } from 'vue-property-decorator'
+import { Component, Mixins, Prop, Watch } from 'vue-property-decorator'
 import StateMixin from '@/mixins/state'
 import GcodePreviewControlCheckbox from '@/components/widgets/gcode-preview/GcodePreviewControlCheckbox.vue'
 import FilesMixin from '@/mixins/files'
 import { AppFile } from '@/store/files/types'
+import { isFileCached, getFile } from '@/util/file-caching'
 
 @Component({
   components: { GcodePreviewControlCheckbox }
@@ -61,6 +62,17 @@ import { AppFile } from '@/store/files/types'
 export default class GcodePreviewControls extends Mixins(StateMixin, FilesMixin) {
   @Prop({ type: Boolean, default: false })
   disabled!: boolean
+
+  @Watch('printerFile')
+  async loadGcodeIfCached (file: AppFile | undefined) {
+    if (this.printerPrinting && file) {
+      if (await isFileCached(file, this.$indexedDb.table('gcode'))) {
+        const { data: gcode } = await getFile(file, this.$indexedDb.table('files'))
+
+        this.parseAndLoadGcode(file, gcode)
+      }
+    }
+  }
 
   get printerFile (): AppFile | undefined {
     const currentFile = this.$store.state.printer.printer.current_file
@@ -86,20 +98,24 @@ export default class GcodePreviewControls extends Mixins(StateMixin, FilesMixin)
   }
 
   async loadCurrent () {
-    const file = this.$store.state.printer.printer.current_file as AppFile
+    const file = this.printerFile as AppFile
 
     this.getGcode(file, { serveFromCache: true })
       .then((gcode) => {
-        this.$store.dispatch('gcodePreview/loadGcode', {
-          file,
-          gcode,
-          serveFromCache: true
-        })
+        this.parseAndLoadGcode(file, gcode)
       })
       .catch(e => e)
       .finally(() => {
         this.$store.dispatch('files/removeFileDownload')
       })
+  }
+
+  parseAndLoadGcode (file: AppFile, gcode: string) {
+    this.$store.dispatch('gcodePreview/loadGcode', {
+      file,
+      gcode,
+      serveFromCache: true
+    })
   }
 
   resetFile () {

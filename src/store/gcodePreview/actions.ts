@@ -2,6 +2,7 @@ import Vue from 'vue'
 import { ActionTree } from 'vuex'
 import { GcodePreviewState, ParsingRequestPayload } from './types'
 import { RootState } from '../types'
+import { generateCacheKey } from '@/util/file-caching'
 import { spawn, Thread, Worker } from 'threads'
 import consola from 'consola'
 
@@ -24,7 +25,7 @@ export const actions: ActionTree<GcodePreviewState, RootState> = {
   },
 
   async loadGcode ({ commit, getters, state }, payload: ParsingRequestPayload) {
-    const databaseKey = `${payload.file.name}-${payload.file.modified}`
+    const databaseKey = generateCacheKey(payload.file)
 
     if (payload.serveFromCache) {
       const record = await Vue.$indexedDb.table('gcode').get({ name: databaseKey })
