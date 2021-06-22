@@ -54,7 +54,6 @@ import StateMixin from '@/mixins/state'
 import GcodePreviewControlCheckbox from '@/components/widgets/gcode-preview/GcodePreviewControlCheckbox.vue'
 import FilesMixin from '@/mixins/files'
 import { AppFile } from '@/store/files/types'
-import { AxiosResponse } from 'axios'
 
 @Component({
   components: { GcodePreviewControlCheckbox }
@@ -88,9 +87,9 @@ export default class GcodePreviewControls extends Mixins(StateMixin, FilesMixin)
 
   async loadCurrent () {
     const file = this.$store.state.printer.printer.current_file as AppFile
-    this.getGcode(file)
-      .then(response => response?.data)
-      .then((gcode: AxiosResponse) => {
+
+    this.getGcode(file, { serveFromCache: true })
+      .then((gcode) => {
         this.$store.dispatch('gcodePreview/loadGcode', {
           file,
           gcode
