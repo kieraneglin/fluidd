@@ -1,10 +1,11 @@
-import { AppFile, FilesUpload, Thumbnail } from '@/store/files/types'
+import { AppFile, FilesUpload, Thumbnail, FileRequestOptions } from '@/store/files/types'
 import Vue from 'vue'
 import httpClient from '@/api/httpClient'
 import { Component } from 'vue-property-decorator'
 import { getThumb } from '@/store/helpers'
 import Axios, { AxiosRequestConfig, CancelTokenSource } from 'axios'
 import { authApi } from '@/api/auth.api'
+import { generateCacheKey } from '@/util/file-caching'
 
 @Component
 export default class FilesMixin extends Vue {
@@ -34,7 +35,17 @@ export default class FilesMixin extends Vue {
   /**
    * Loads a gcode file and parses for the gcode-viewer.
    */
-  async getGcode (file: AppFile) {
+  async getGcode (file: AppFile, options: FileRequestOptions = {}) {
+    const databaseKey = generateCacheKey(file)
+
+    if (options.serveFromCache) {
+      const record = await this.$indexedDb.table('files').get({ name: databaseKey })
+
+      if (record) {
+        return record.data
+      }
+    }
+
     const sizeInMB = file.size / 1024 / 1024
     let res: boolean | undefined = true
 
@@ -53,11 +64,17 @@ export default class FilesMixin extends Vue {
     if (res) {
       this.cancelTokenSource = Axios.CancelToken.source()
       const path = file.path ? `${file.path}/${file.filename}` : file.filename
-      return await this.getFile(path, 'gcodes', file.size, {
+      const { data } = await this.getFile(path, 'gcodes', file.size, {
         responseType: 'text',
         transformResponse: [v => v],
         cancelToken: this.cancelTokenSource.token
       })
+
+      if (options.serveFromCache) {
+        await this.$indexedDb.table('files').put({ name: databaseKey, data })
+      }
+
+      return data
     }
   }
 

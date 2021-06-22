@@ -33,6 +33,7 @@ import { FiltersPlugin } from './plugins/filters'
 import { SocketPlugin } from './plugins/socketClient'
 import { ColorSetPlugin } from './plugins/colorSet'
 import { DayJSPlugin } from './plugins/dayjs'
+import { IndexedDbPlugin } from './plugins/indexed-db'
 import { plugin } from 'echarts-for-vue'
 
 // Import ECharts
@@ -87,6 +88,7 @@ echarts.use([
 Vue.use(plugin, { echarts })
 Vue.use(VueVirtualScroller)
 Vue.use(DayJSPlugin)
+Vue.use(IndexedDbPlugin)
 Vue.use(FiltersPlugin)
 Vue.use(VueMeta)
 Vue.use(ColorSetPlugin, {})

@@ -1,7 +1,8 @@
+import Vue from 'vue'
 import { ActionTree } from 'vuex'
-import { GcodePreviewState } from './types'
+import { GcodePreviewState, ParsingRequestPayload } from './types'
 import { RootState } from '../types'
-import { AppFile } from '@/store/files/types'
+import { generateCacheKey } from '@/util/file-caching'
 import { spawn, Thread, Worker } from 'threads'
 import consola from 'consola'
 
@@ -23,7 +24,19 @@ export const actions: ActionTree<GcodePreviewState, RootState> = {
     }
   },
 
-  async loadGcode ({ commit, getters, state }, payload: { file: AppFile; gcode: string }) {
+  async loadGcode ({ commit, getters, state }, payload: ParsingRequestPayload) {
+    const databaseKey = generateCacheKey(payload.file)
+
+    if (payload.serveFromCache) {
+      const record = await Vue.$indexedDb.table('gcode').get({ name: databaseKey })
+
+      if (record) {
+        commit('setMoves', record.data)
+
+        return
+      }
+    }
+
     const worker = await spawn(new Worker('@/workers/parseGcode.worker'))
 
     commit('setParserWorker', worker)
@@ -48,7 +61,13 @@ export const actions: ActionTree<GcodePreviewState, RootState> = {
     commit('setFile', payload.file)
 
     try {
-      commit('setMoves', await Promise.race([abort, worker.parse(payload.gcode)]))
+      const parsedGcode = await Promise.race([abort, worker.parse(payload.gcode)])
+
+      if (payload.serveFromCache) {
+        await Vue.$indexedDb.table('gcode').put({ name: databaseKey, data: parsedGcode })
+      }
+
+      commit('setMoves', parsedGcode)
       commit('setParserProgress', payload.file.size ?? payload.gcode.length)
     } catch (error) {
       consola.error('Parser worker error', error)

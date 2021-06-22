@@ -14,6 +14,10 @@ export interface FilesState {
   logs: Files[];
 }
 
+export interface FileRequestOptions {
+  serveFromCache?: boolean;
+}
+
 export interface DiskUsage {
   total: number;
   used: number;
